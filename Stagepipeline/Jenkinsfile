@@ -20,6 +20,9 @@ pipeline{
         NEXUS_LOGIN = 'nexuslogin'
         SONARSERVER = 'sonarqubeserver'
         SONARSCANNER = 'sonarqubescanner'
+        registryCredential = 'ecr:us-west-2:jenkins-aws-creds'
+        appRegistry = '111280592884.dkr.ecr.us-west-2.amazonaws.com/vproappimage'
+        vproRegistry = '111280592884.dkr.ecr.us-west-2.amazonaws.com'
     }
     stages{
         stage('BUILD'){
@@ -96,8 +99,24 @@ pipeline{
                 ]
                 )
             }
-        }  
-    }
+        }
+        stage ('BUILD APP IMAGE') {
+            steps{
+                script {
+                    dockerImage = docker.build (appRegistry + “:$BUILD_NUMBER”, “./Docker-files/app/multistage/”)
+                }
+            } 
+        }
+        stage ('UPLOAD APP IMAGE'){
+            steps {
+	⁃	        script {
+	⁃	            docker.withRegistry (vproRegistry, registryCredential) {
+	⁃	            dockerImage.push (“$BUILD_NUMBER”)
+	⁃	            dockerImage.push (‘latest’)
+	⁃	            }
+                }
+            }
+        }
     post {
         always{
             echo 'slack notification'
